@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: textract-backend
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 52MB
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    upload-bucket: ${UPLOAD_BUCKET}
+    results-bucket: ${RESULTS_BUCKET}
+  dynamodb:
+    table-name: ${DYNAMODB_TABLE:textract_jobs}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+logging:
+  level:
+    com.enterprise.textract: DEBUG
+    software.amazon.awssdk: WARN

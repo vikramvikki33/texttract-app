@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocExtract — AI Document Analysis</title>
+  <meta name="description" content="Upload PDF or image documents for instant AI-powered text extraction using AWS Textract." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Background orbs ── -->
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">DocExtract</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#upload-section" class="nav-link">Upload</a>
+      <a href="#retrieve-section" class="nav-link">Retrieve</a>
+    </nav>
+  </header>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-badge">Powered by AWS Textract</div>
+    <h1 class="hero-title">Intelligent Document<br /><span class="gradient-text">Text Extraction</span></h1>
+    <p class="hero-subtitle">Upload any PDF or image. Our AI analyses it instantly and delivers structured data as a downloadable Excel report.</p>
+  </section>
+
+  <!-- ── Main Container ── -->
+  <main class="container">
+
+    <!-- ── Config (API URL) ── -->
+    <div class="config-card glass-card" id="config-section">
+      <label class="config-label" for="api-url-input">API Base URL</label>
+      <div class="config-row">
+        <input id="api-url-input" type="text" class="config-input"
+               value="http://localhost:8080" placeholder="http://localhost:8080" />
+        <button class="btn btn-sm btn-secondary" onclick="saveApiUrl()">Save</button>
+      </div>
+    </div>
+
+    <!-- ── Upload Section ── -->
+    <section id="upload-section" class="glass-card section-card">
+      <div class="section-header">
+        <div class="section-icon upload-icon">📄</div>
+        <div>
+          <h2 class="section-title">Upload Document</h2>
+          <p class="section-subtitle">PDF, JPG, PNG or TIFF — up to 50 MB</p>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="drop-zone-inner">
+          <div class="drop-icon">☁️</div>
+          <p class="drop-text">Drag &amp; drop your file here</p>
+          <p class="drop-sub">or click to browse</p>
+          <div class="drop-types">PDF • JPG • PNG • TIFF</div>
+        </div>
+      </div>
+      <input id="file-input" type="file" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif" hidden onchange="onFileSelected(event)" />
+
+      <!-- Selected file preview -->
+      <div id="file-preview" class="file-preview hidden">
+        <div class="file-info">
+          <span id="file-icon" class="file-type-badge">PDF</span>
+          <div>
+            <p id="file-name" class="file-name-text"></p>
+            <p id="file-size" class="file-size-text"></p>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="clearFile()">✕ Clear</button>
+      </div>
+
+      <!-- Duplicate Alert Banner -->
+      <div id="duplicate-banner" class="alert-banner duplicate hidden">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <strong>Previously analysed document found!</strong>
+          <p id="duplicate-msg">This file has already been processed. You can view the existing result or reprocess it.</p>
+        </div>
+        <div class="alert-actions">
+          <button class="btn btn-sm btn-outline" id="view-existing-btn" onclick="viewExistingResult()">View Result</button>
+          <button class="btn btn-sm btn-danger" id="reprocess-btn" onclick="triggerReprocess()">Reprocess &amp; Replace</button>
+        </div>
+      </div>
+
+      <button id="upload-btn" class="btn btn-primary btn-full" onclick="uploadDocument()" disabled>
+        <span class="btn-icon">🚀</span> Analyse Document
+      </button>
+
+      <!-- Upload Progress -->
+      <div id="upload-progress" class="progress-section hidden">
+        <div class="progress-label">
+          <span id="progress-text">Uploading...</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      </div>
+
+      <!-- Acknowledgment Result -->
+      <div id="ack-card" class="ack-card hidden">
+        <div class="ack-label">Acknowledgment ID</div>
+        <div class="ack-id-row">
+          <code id="ack-id-display" class="ack-id"></code>
+          <button class="btn btn-ghost btn-xs" onclick="copyAckId()" title="Copy to clipboard">📋</button>
+        </div>
+        <p id="ack-message" class="ack-message"></p>
+        <button class="btn btn-sm btn-secondary mt-sm" onclick="startPollingFromUpload()">Track Status →</button>
+      </div>
+    </section>
+
+    <!-- ── Status & Retrieval Section ── -->
+    <section id="retrieve-section" class="glass-card section-card">
+      <div class="section-header">
+        <div class="section-icon retrieve-icon">🔍</div>
+        <div>
+          <h2 class="section-title">Retrieve Results</h2>
+          <p class="section-subtitle">Enter your acknowledgment ID to fetch the extracted data</p>
+        </div>
+      </div>
+
+      <div class="retrieve-row">
+        <input id="ack-id-input" type="text" class="ack-input" placeholder="Enter acknowledgment ID…"
+               oninput="onAckInput()" onkeydown="if(event.key==='Enter') fetchStatus()" />
+        <button class="btn btn-primary" onclick="fetchStatus()" id="fetch-btn" disabled>Check Status</button>
+      </div>
+
+      <!-- Status Card -->
+      <div id="status-card" class="status-card hidden">
+        <div class="status-row">
+          <div>
+            <p class="status-label">Status</p>
+            <div id="status-badge" class="status-badge pending">PENDING</div>
+          </div>
+          <div>
+            <p class="status-label">File</p>
+            <p id="status-file" class="status-file"></p>
+          </div>
+          <div>
+            <p class="status-label">Last Updated</p>
+            <p id="status-updated" class="status-updated"></p>
+          </div>
+        </div>
+
+        <!-- Live polling bar -->
+        <div id="polling-indicator" class="polling-indicator hidden">
+          <div class="pulse-dot"></div>
+          <span>Auto-refreshing every 5 seconds…</span>
+        </div>
+
+        <!-- Error display -->
+        <div id="status-error" class="status-error hidden"></div>
+
+        <!-- View result button -->
+        <button id="view-result-btn" class="btn btn-primary mt-md hidden" onclick="fetchResult()">
+          📊 View Extracted Data
+        </button>
+      </div>
+
+      <!-- Results Table -->
+      <div id="result-section" class="result-section hidden">
+        <div class="result-header">
+          <h3 class="result-title">Extracted Data</h3>
+          <div class="result-actions">
+            <div id="sheet-tabs" class="sheet-tabs"></div>
+            <a id="download-link" href="#" class="btn btn-sm btn-secondary" target="_blank">⬇️ Download Excel</a>
+          </div>
+        </div>
+        <div id="table-container" class="table-container">
+          <table id="result-table" class="result-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <p id="row-count" class="row-count"></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Toast ── -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
